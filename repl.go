@@ -10,16 +10,26 @@ import (
 func startRepl() {
 	scanner := bufio.NewScanner(os.Stdin)
 
-	for {
+	var quitting bool
+	for !quitting {
 		fmt.Print("Pokedex > ")
 		scanner.Scan()
 
 		userInput := cleanInput(scanner.Text())
 		if len(userInput) == 0 {
+			continue
 		}
 
-		command := userInput[0]
-		fmt.Printf("Your command was: %v\n", command)
+		commandName := userInput[0]
+		command, exists := getCommands()[commandName]
+		if !exists {
+			fmt.Println("Unknown command")
+			continue
+		}
+
+		if err := command.callback(); err != nil {
+			fmt.Println(err)
+		}
 	}
 }
 
