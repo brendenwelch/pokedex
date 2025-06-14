@@ -3,13 +3,24 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"os"
 	"strings"
 )
 
-func Prompt(scanner *bufio.Scanner) []string {
-	fmt.Print("Pokedex > ")
-	scanner.Scan()
-	return cleanInput(scanner.Text())
+func startRepl() {
+	scanner := bufio.NewScanner(os.Stdin)
+
+	for {
+		fmt.Print("Pokedex > ")
+		scanner.Scan()
+
+		userInput := cleanInput(scanner.Text())
+		if len(userInput) == 0 {
+		}
+
+		command := userInput[0]
+		fmt.Printf("Your command was: %v\n", command)
+	}
 }
 
 func cleanInput(text string) []string {
