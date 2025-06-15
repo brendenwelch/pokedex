@@ -5,14 +5,20 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/brendenwelch/pokedex/internal/pokeapi"
 )
 
-func startRepl() {
-	scanner := bufio.NewScanner(os.Stdin)
-	cfg := config{}
+type config struct {
+	Client   pokeapi.Client
+	Next     *string
+	Previous *string
+}
 
-	var quitting bool
-	for !quitting {
+func startRepl(cfg *config) {
+	scanner := bufio.NewScanner(os.Stdin)
+
+	for {
 		fmt.Print("Pokedex > ")
 		scanner.Scan()
 
@@ -28,7 +34,7 @@ func startRepl() {
 			continue
 		}
 
-		if err := command.callback(&cfg); err != nil {
+		if err := command.callback(cfg); err != nil {
 			fmt.Println(err)
 		}
 	}

@@ -1,78 +1,14 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"net/http"
 	"os"
-	"strconv"
-	"strings"
 )
-
-const baseUrl string = "https://pokeapi.co/api/v2/location-area/"
 
 type cliCommand struct {
 	name        string
 	description string
 	callback    func(*config) error
-}
-
-type config struct {
-	Next     string
-	Previous string
-}
-
-type locationArea struct {
-	EncounterMethodRates []struct {
-		EncounterMethod struct {
-			Name string `json:"name"`
-			URL  string `json:"url"`
-		} `json:"encounter_method"`
-		VersionDetails []struct {
-			Rate    int `json:"rate"`
-			Version struct {
-				Name string `json:"name"`
-				URL  string `json:"url"`
-			} `json:"version"`
-		} `json:"version_details"`
-	} `json:"encounter_method_rates"`
-	GameIndex int `json:"game_index"`
-	ID        int `json:"id"`
-	Location  struct {
-		Name string `json:"name"`
-		URL  string `json:"url"`
-	} `json:"location"`
-	Name  string `json:"name"`
-	Names []struct {
-		Language struct {
-			Name string `json:"name"`
-			URL  string `json:"url"`
-		} `json:"language"`
-		Name string `json:"name"`
-	} `json:"names"`
-	PokemonEncounters []struct {
-		Pokemon struct {
-			Name string `json:"name"`
-			URL  string `json:"url"`
-		} `json:"pokemon"`
-		VersionDetails []struct {
-			EncounterDetails []struct {
-				Chance          int   `json:"chance"`
-				ConditionValues []any `json:"condition_values"`
-				MaxLevel        int   `json:"max_level"`
-				Method          struct {
-					Name string `json:"name"`
-					URL  string `json:"url"`
-				} `json:"method"`
-				MinLevel int `json:"min_level"`
-			} `json:"encounter_details"`
-			MaxChance int `json:"max_chance"`
-			Version   struct {
-				Name string `json:"name"`
-				URL  string `json:"url"`
-			} `json:"version"`
-		} `json:"version_details"`
-	} `json:"pokemon_encounters"`
 }
 
 func getCommands() map[string]cliCommand {
@@ -90,7 +26,7 @@ func getCommands() map[string]cliCommand {
 		"map": {
 			name:        "map",
 			description: "Show next 20 location areas in the Pokemon world",
-			callback:    commandMap,
+			callback:    commandMapf,
 		},
 		"mapb": {
 			name:        "mapb",
@@ -116,58 +52,37 @@ func commandHelp(cfg *config) error {
 	return nil
 }
 
-func commandMap(cfg *config) error {
-	if cfg.Next == "" {
-		cfg.Next = baseUrl + "1"
-	}
-	if err := helperMap(cfg, cfg.Next); err != nil {
+func commandMapf(cfg *config) error {
+	res, err := cfg.Client.ListLocations(cfg.Next)
+	if err != nil {
 		return err
+	}
+
+	print("help")
+	cfg.Next = res.Next
+	cfg.Previous = res.Previous
+
+	for _, loc := range res.Results {
+		fmt.Println(loc.Name)
 	}
 	return nil
 }
 
 func commandMapb(cfg *config) error {
-	if cfg.Previous == "" {
+	if cfg.Previous == nil {
 		return fmt.Errorf("you're on the first page")
 	}
-	if err := helperMap(cfg, cfg.Previous); err != nil {
-		return err
-	}
-	return nil
-}
 
-func helperMap(cfg *config, page string) error {
-	split := strings.Split(page, "/")
-	pageStart, err := strconv.Atoi(split[len(split)-1])
+	res, err := cfg.Client.ListLocations(cfg.Previous)
 	if err != nil {
 		return err
 	}
 
-	for i := range 20 {
-		areaUrl := fmt.Sprintf("%s%d", baseUrl, pageStart+i)
-		res, err := http.DefaultClient.Get(areaUrl)
-		if err != nil {
-			return err
-		}
-		if res.StatusCode > 299 {
-			return fmt.Errorf("error getting location area response")
-		}
-		defer res.Body.Close()
+	cfg.Next = res.Next
+	cfg.Previous = res.Previous
 
-		var data locationArea
-		decoder := json.NewDecoder(res.Body)
-		if err := decoder.Decode(&data); err != nil {
-			return err
-		}
-
-		fmt.Println(data.Name)
-	}
-
-	cfg.Next = fmt.Sprintf("%s%d", baseUrl, pageStart+20)
-	if pageStart > 20 {
-		cfg.Previous = fmt.Sprintf("%s%d", baseUrl, pageStart-20)
-	} else {
-		cfg.Previous = ""
+	for _, loc := range res.Results {
+		fmt.Println(loc.Name)
 	}
 	return nil
 }
