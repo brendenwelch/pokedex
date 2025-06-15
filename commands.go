@@ -9,6 +9,8 @@ import (
 	"strings"
 )
 
+const baseUrl string = "https://pokeapi.co/api/v2/location-area/"
+
 type cliCommand struct {
 	name        string
 	description string
@@ -115,54 +117,27 @@ func commandHelp(cfg *config) error {
 }
 
 func commandMap(cfg *config) error {
-	baseUrl := "https://pokeapi.co/api/v2/location-area/"
 	if cfg.Next == "" {
 		cfg.Next = baseUrl + "1"
 	}
-
-	split := strings.Split(cfg.Next, "/")
-	pageStart, err := strconv.Atoi(split[len(split)-1])
-	if err != nil {
+	if err := helperMap(cfg, cfg.Next); err != nil {
 		return err
 	}
-
-	for i := range 20 {
-		areaUrl := fmt.Sprintf("%s%d", baseUrl, pageStart+i)
-		res, err := http.DefaultClient.Get(areaUrl)
-		if err != nil {
-			return err
-		}
-		if res.StatusCode > 299 {
-			return fmt.Errorf("error getting location area response")
-		}
-		defer res.Body.Close()
-
-		var data locationArea
-		decoder := json.NewDecoder(res.Body)
-		if err := decoder.Decode(&data); err != nil {
-			return err
-		}
-
-		fmt.Println(data.Name)
-	}
-
-	cfg.Next = fmt.Sprintf("%s%d", baseUrl, pageStart+20)
-	if pageStart > 20 {
-		cfg.Previous = fmt.Sprintf("%s%d", baseUrl, pageStart-20)
-	} else {
-		cfg.Previous = ""
-	}
-
 	return nil
 }
 
 func commandMapb(cfg *config) error {
-	baseUrl := "https://pokeapi.co/api/v2/location-area/"
 	if cfg.Previous == "" {
 		return fmt.Errorf("you're on the first page")
 	}
+	if err := helperMap(cfg, cfg.Previous); err != nil {
+		return err
+	}
+	return nil
+}
 
-	split := strings.Split(cfg.Previous, "/")
+func helperMap(cfg *config, page string) error {
+	split := strings.Split(page, "/")
 	pageStart, err := strconv.Atoi(split[len(split)-1])
 	if err != nil {
 		return err
