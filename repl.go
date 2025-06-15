@@ -9,6 +9,10 @@ import (
 
 func startRepl() {
 	scanner := bufio.NewScanner(os.Stdin)
+	cfg := config{
+		Next:     1,
+		Previous: 0,
+	}
 
 	var quitting bool
 	for !quitting {
@@ -27,7 +31,7 @@ func startRepl() {
 			continue
 		}
 
-		if err := command.callback(); err != nil {
+		if err := command.callback(&cfg); err != nil {
 			fmt.Println(err)
 		}
 	}
