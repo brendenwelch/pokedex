@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
+	"strings"
 )
 
 type cliCommand struct {
@@ -14,8 +16,8 @@ type cliCommand struct {
 }
 
 type config struct {
-	Next     int
-	Previous int
+	Next     string
+	Previous string
 }
 
 type locationArea struct {
@@ -88,6 +90,11 @@ func getCommands() map[string]cliCommand {
 			description: "Show next 20 location areas in the Pokemon world",
 			callback:    commandMap,
 		},
+		"mapb": {
+			name:        "mapb",
+			description: "Show previous 20 location areas in the Pokemon world",
+			callback:    commandMapb,
+		},
 	}
 }
 
@@ -108,18 +115,25 @@ func commandHelp(cfg *config) error {
 }
 
 func commandMap(cfg *config) error {
-	cfg.Previous = cfg.Next
 	baseUrl := "https://pokeapi.co/api/v2/location-area/"
+	if cfg.Next == "" {
+		cfg.Next = baseUrl + "1"
+	}
+
+	split := strings.Split(cfg.Next, "/")
+	pageStart, err := strconv.Atoi(split[len(split)-1])
+	if err != nil {
+		return err
+	}
 
 	for i := range 20 {
-		_ = i
-		fullUrl := fmt.Sprintf("%s%d/", baseUrl, cfg.Next)
-		res, err := http.DefaultClient.Get(fullUrl)
+		areaUrl := fmt.Sprintf("%s%d", baseUrl, pageStart+i)
+		res, err := http.DefaultClient.Get(areaUrl)
 		if err != nil {
 			return err
 		}
 		if res.StatusCode > 299 {
-			return fmt.Errorf("error: %v", res.Status)
+			return fmt.Errorf("error getting location area response")
 		}
 		defer res.Body.Close()
 
@@ -130,8 +144,55 @@ func commandMap(cfg *config) error {
 		}
 
 		fmt.Println(data.Name)
-		cfg.Next = cfg.Next + 1
 	}
 
+	cfg.Next = fmt.Sprintf("%s%d", baseUrl, pageStart+20)
+	if pageStart > 20 {
+		cfg.Previous = fmt.Sprintf("%s%d", baseUrl, pageStart-20)
+	} else {
+		cfg.Previous = ""
+	}
+
+	return nil
+}
+
+func commandMapb(cfg *config) error {
+	baseUrl := "https://pokeapi.co/api/v2/location-area/"
+	if cfg.Previous == "" {
+		return fmt.Errorf("you're on the first page")
+	}
+
+	split := strings.Split(cfg.Previous, "/")
+	pageStart, err := strconv.Atoi(split[len(split)-1])
+	if err != nil {
+		return err
+	}
+
+	for i := range 20 {
+		areaUrl := fmt.Sprintf("%s%d", baseUrl, pageStart+i)
+		res, err := http.DefaultClient.Get(areaUrl)
+		if err != nil {
+			return err
+		}
+		if res.StatusCode > 299 {
+			return fmt.Errorf("error getting location area response")
+		}
+		defer res.Body.Close()
+
+		var data locationArea
+		decoder := json.NewDecoder(res.Body)
+		if err := decoder.Decode(&data); err != nil {
+			return err
+		}
+
+		fmt.Println(data.Name)
+	}
+
+	cfg.Next = fmt.Sprintf("%s%d", baseUrl, pageStart+20)
+	if pageStart > 20 {
+		cfg.Previous = fmt.Sprintf("%s%d", baseUrl, pageStart-20)
+	} else {
+		cfg.Previous = ""
+	}
 	return nil
 }

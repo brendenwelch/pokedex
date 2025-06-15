@@ -9,10 +9,7 @@ import (
 
 func startRepl() {
 	scanner := bufio.NewScanner(os.Stdin)
-	cfg := config{
-		Next:     1,
-		Previous: 0,
-	}
+	cfg := config{}
 
 	var quitting bool
 	for !quitting {
