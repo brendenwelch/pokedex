@@ -34,7 +34,12 @@ func startRepl(cfg *config) {
 			continue
 		}
 
-		if err := command.callback(cfg); err != nil {
+		var arg *string
+		if len(userInput) >= 2 {
+			arg = &userInput[1]
+		}
+
+		if err := command.callback(cfg, arg); err != nil {
 			fmt.Println(err)
 		}
 	}
