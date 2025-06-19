@@ -54,7 +54,10 @@ func (c *Cache) reapLoop(interval time.Duration) {
 }
 
 func NewCache(interval time.Duration) *Cache {
-	c := &Cache{}
+	c := &Cache{
+		entry: map[string]cacheEntry{},
+		mu:    sync.Mutex{},
+	}
 	go c.reapLoop(interval)
 	return c
 }
