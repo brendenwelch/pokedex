@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"slices"
 )
 
 type cliCommand struct {
@@ -43,6 +44,11 @@ func getCommands() map[string]cliCommand {
 			name:        "catch",
 			description: "Attempt to catch the given Pokemon",
 			callback:    commandCatch,
+		},
+		"inspect": {
+			name:        "inspect",
+			description: "Inspect the given Pokemon, if already caught",
+			callback:    commandInspect,
 		},
 	}
 }
@@ -132,6 +138,37 @@ func commandCatch(cfg *config, pokemon *string) error {
 	}
 	fmt.Printf("%s was caught!\n", *pokemon)
 	cfg.Caught = append(cfg.Caught, *pokemon)
+
+	return nil
+}
+
+func commandInspect(cfg *config, pokemon *string) error {
+	if pokemon == nil {
+		return fmt.Errorf("error inspecting. no pokemon name provided")
+	}
+
+	if !slices.Contains(cfg.Caught, *pokemon) {
+		fmt.Println("you have not caught that pokemon")
+		return nil
+	}
+
+	res, err := cfg.Client.GetPokemon(pokemon)
+	if err != nil {
+		fmt.Println("error inspecting. pokemon not found")
+		return err
+	}
+
+	fmt.Printf("Name: %v\n", res.Name)
+	fmt.Printf("Height: %v\n", res.Height)
+	fmt.Printf("Weight: %v\n", res.Weight)
+	fmt.Println("Stats:")
+	for _, val := range res.Stats {
+		fmt.Printf("-%v: %v\n", val.Stat.Name, val.BaseStat)
+	}
+	fmt.Println("Types:")
+	for _, val := range res.Types {
+		fmt.Printf("- %v\n", val.Type.Name)
+	}
 
 	return nil
 }
