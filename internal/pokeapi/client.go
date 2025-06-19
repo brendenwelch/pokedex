@@ -110,3 +110,46 @@ func (c *Client) GetLocation(location *string) (RespLocation, error) {
 
 	return data, nil
 }
+
+func (c *Client) GetPokemon(pokemon *string) (RespPokemon, error) {
+	if pokemon == nil {
+		return RespPokemon{}, fmt.Errorf("error getting pokemon. no pokemon name provided")
+	}
+
+	url := "https://pokeapi.co/api/v2/pokemon/" + *pokemon
+
+	_, exists := c.cache.Get(url)
+	if !exists {
+		req, err := http.NewRequest("GET", url, nil)
+		if err != nil {
+			return RespPokemon{}, err
+		}
+
+		res, err := c.httpClient.Do(req)
+		if err != nil {
+			return RespPokemon{}, err
+		}
+		if res.StatusCode > 299 {
+			return RespPokemon{}, fmt.Errorf("error getting pokemon response")
+		}
+		defer res.Body.Close()
+
+		entry, err := io.ReadAll(res.Body)
+		if err != nil {
+			return RespPokemon{}, err
+		}
+		c.cache.Add(url, entry)
+	}
+
+	entry, exists := c.cache.Get(url)
+	if !exists {
+		return RespPokemon{}, fmt.Errorf("error getting cache entry")
+	}
+
+	var data RespPokemon
+	if err := json.Unmarshal(entry, &data); err != nil {
+		return RespPokemon{}, err
+	}
+
+	return data, nil
+}

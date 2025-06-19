@@ -13,6 +13,7 @@ type config struct {
 	Client   pokeapi.Client
 	Next     *string
 	Previous *string
+	Caught   []string
 }
 
 func startRepl(cfg *config) {
